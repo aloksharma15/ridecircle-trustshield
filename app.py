@@ -71,13 +71,15 @@ def index():
 @app.route("/analyze", methods=["POST"])
 def analyze_multi():
 
+    data = request.get_json()
+
     required_fields = [
         "before_front", "before_rear", "before_left", "before_right",
         "after_front", "after_rear", "after_left", "after_right"
     ]
 
     for field in required_fields:
-        if field not in request.files:
+        if field not in data:
             return jsonify({"success": False, "error": f"{field} missing"}), 400
 
     pre_dict = {}
@@ -85,10 +87,16 @@ def analyze_multi():
 
     timestamp = str(int(time.time()))
 
+    def download_image(url, save_path):
+        response = requests.get(url)
+        img_array = np.frombuffer(response.content, np.uint8)
+        img = cv2.imdecode(img_array, cv2.IMREAD_COLOR)
+        cv2.imwrite(save_path, img)
+
     for side in ["front", "rear", "left", "right"]:
 
-        before_file = request.files[f"before_{side}"]
-        after_file = request.files[f"after_{side}"]
+        before_url = data[f"before_{side}"]
+        after_url = data[f"after_{side}"]
 
         before_path = os.path.join(
             UPLOAD_FOLDER, f"{side}_before_{timestamp}.jpg"
@@ -97,8 +105,8 @@ def analyze_multi():
             UPLOAD_FOLDER, f"{side}_after_{timestamp}.jpg"
         )
 
-        before_file.save(before_path)
-        after_file.save(after_path)
+        download_image(before_url, before_path)
+        download_image(after_url, after_path)
 
         pre_dict[side] = before_path
         post_dict[side] = after_path
