@@ -3,6 +3,7 @@ import os
 import cv2
 import time
 import requests
+import numpy as np
 from trust_shield import trust_shield_check, trust_shield_multi
 
 app = Flask(__name__)
