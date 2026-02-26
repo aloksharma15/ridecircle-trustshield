@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, redirect, url_for, jsonify
 import os
 import cv2
 import time
+import requests
 from trust_shield import trust_shield_check, trust_shield_multi
 
 app = Flask(__name__)
