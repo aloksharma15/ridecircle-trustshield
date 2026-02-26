@@ -7,6 +7,11 @@ from skimage.metrics import structural_similarity as ssim
 from ultralytics import YOLO
 
 # ==========================
+# DEMO MODE (Set False for Full ML)
+# ==========================
+DEMO_MODE = True
+
+# ==========================
 # DEVICE
 # ==========================
 device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
@@ -14,18 +19,24 @@ device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
 # ==========================
 # LOAD YOLO
 # ==========================
-yolo_model = YOLO("yolov8n.pt")
+if not DEMO_MODE:
+    yolo_model = YOLO("yolov8n.pt")
+else:
+    yolo_model = None
 
 # ==========================
 # LOAD CNN (logging only)
 # ==========================
-classifier = models.mobilenet_v2(weights=None)
-classifier.classifier[1] = nn.Linear(classifier.last_channel, 2)
-classifier.load_state_dict(
-    torch.load("models/damage_classifier.pth", map_location=device)
-)
-classifier = classifier.to(device)
-classifier.eval()
+if not DEMO_MODE:
+    classifier = models.mobilenet_v2(weights=None)
+    classifier.classifier[1] = nn.Linear(classifier.last_channel, 2)
+    classifier.load_state_dict(
+        torch.load("models/damage_classifier.pth", map_location=device)
+    )
+    classifier = classifier.to(device)
+    classifier.eval()
+else:
+    classifier = None
 
 transform = transforms.Compose([
     transforms.ToPILImage(),
@@ -40,6 +51,10 @@ transform = transforms.Compose([
 # YOLO DETECTION
 # ==========================
 def detect_car_region(image):
+
+    if DEMO_MODE:
+        return image, (0, 0, image.shape[1], image.shape[0])
+
     results = yolo_model(image, verbose=False)[0]
 
     for box in results.boxes:
