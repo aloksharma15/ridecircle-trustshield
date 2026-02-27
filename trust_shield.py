@@ -96,6 +96,10 @@ def trust_shield_check(pre_path, post_path):
     if img_pre is None or img_post is None:
         return {"success": False, "error": "IMAGE LOAD FAILED"}
 
+    # 🔧 Resize BEFORE any heavy processing
+    img_pre = cv2.resize(img_pre, (800, 600))
+    img_post = cv2.resize(img_post, (800, 600))
+
     gray_pre = cv2.cvtColor(img_pre, cv2.COLOR_BGR2GRAY)
     gray_post = cv2.cvtColor(img_post, cv2.COLOR_BGR2GRAY)
 
