@@ -103,6 +103,10 @@ def trust_shield_check(pre_path, post_path):
     gray_pre = cv2.cvtColor(img_pre, cv2.COLOR_BGR2GRAY)
     gray_post = cv2.cvtColor(img_post, cv2.COLOR_BGR2GRAY)
 
+    # Normalize lighting
+    gray_pre_car = cv2.equalizeHist(gray_pre_car)
+    gray_post_car = cv2.equalizeHist(gray_post_car)
+
     orb = cv2.ORB_create(2000)
     kp1, des1 = orb.detectAndCompute(gray_pre, None)
     kp2, des2 = orb.detectAndCompute(gray_post, None)
@@ -143,7 +147,7 @@ def trust_shield_check(pre_path, post_path):
     diff_map = diff_map.astype("uint8")
     diff_map = cv2.GaussianBlur(diff_map, (5, 5), 0)
 
-    _, diff_thresh = cv2.threshold(diff_map, 100, 255,
+    _, diff_thresh = cv2.threshold(diff_map, 40, 255,
                                    cv2.THRESH_BINARY)
 
     contours, _ = cv2.findContours(diff_thresh,
@@ -157,7 +161,7 @@ def trust_shield_check(pre_path, post_path):
 
     for cnt in contours:
         area = cv2.contourArea(cnt)
-        if area > 600:
+        if area > 2000:
             total_area += area
             largest_area = max(largest_area, area)
             damage_count += 1
