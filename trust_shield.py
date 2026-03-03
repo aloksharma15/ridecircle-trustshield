@@ -102,10 +102,7 @@ def trust_shield_check(pre_path, post_path):
 
     gray_pre = cv2.cvtColor(img_pre, cv2.COLOR_BGR2GRAY)
     gray_post = cv2.cvtColor(img_post, cv2.COLOR_BGR2GRAY)
-
-    # Normalize lighting
-    gray_pre_car = cv2.equalizeHist(gray_pre_car)
-    gray_post_car = cv2.equalizeHist(gray_post_car)
+    
 
     orb = cv2.ORB_create(2000)
     kp1, des1 = orb.detectAndCompute(gray_pre, None)
@@ -140,6 +137,10 @@ def trust_shield_check(pre_path, post_path):
 
     gray_pre_car = cv2.cvtColor(pre_car, cv2.COLOR_BGR2GRAY)
     gray_post_car = cv2.cvtColor(post_car, cv2.COLOR_BGR2GRAY)
+
+    # Normalize lighting AFTER ROI extraction
+    gray_pre_car = cv2.equalizeHist(gray_pre_car)
+    gray_post_car = cv2.equalizeHist(gray_post_car)
 
     ssim_score, diff = ssim(gray_pre_car, gray_post_car, full=True)
 
