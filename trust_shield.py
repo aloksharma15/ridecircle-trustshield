@@ -103,37 +103,30 @@ def trust_shield_check(pre_path, post_path):
     gray_pre = cv2.cvtColor(img_pre, cv2.COLOR_BGR2GRAY)
     gray_post = cv2.cvtColor(img_post, cv2.COLOR_BGR2GRAY)
 
-    # ==========================
-    # ECC TRANSLATION ALIGNMENT
-    # ==========================
+    orb = cv2.ORB_create(2000)
+    kp1, des1 = orb.detectAndCompute(gray_pre, None)
+    kp2, des2 = orb.detectAndCompute(gray_post, None)
 
-    warp_mode = cv2.MOTION_TRANSLATION
-    warp_matrix = np.eye(2, 3, dtype=np.float32)
+    if des1 is None or des2 is None:
+        return {"success": False, "error": "INSUFFICIENT FEATURES"}
 
-    criteria = (
-        cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT,
-        50,
-        1e-6
-    )
+    bf = cv2.BFMatcher(cv2.NORM_HAMMING)
+    matches = bf.knnMatch(des1, des2, k=2)
+    good = [m for m, n in matches if m.distance < 0.75 * n.distance]
 
-    try:
-        cc, warp_matrix = cv2.findTransformECC(
-            gray_pre,
-            gray_post,
-            warp_matrix,
-            warp_mode,
-            criteria
-        )
+    if len(good) < 8:
+        return {"success": False, "error": "ALIGNMENT FAILED"}
 
-        aligned = cv2.warpAffine(
-            img_post,
-            warp_matrix,
-            (img_pre.shape[1], img_pre.shape[0]),
-            flags=cv2.INTER_LINEAR + cv2.WARP_INVERSE_MAP
-        )
+    src_pts = np.float32([kp1[m.queryIdx].pt for m in good]).reshape(-1,1,2)
+    dst_pts = np.float32([kp2[m.trainIdx].pt for m in good]).reshape(-1,1,2)
 
-    except:
-        aligned = img_post
+    M, _ = cv2.findHomography(dst_pts, src_pts, cv2.RANSAC, 5.0)
+
+    if M is None:
+        return {"success": False, "error": "HOMOGRAPHY FAILED"}
+
+    aligned = cv2.warpPerspective(img_post, M,
+                                  (img_pre.shape[1], img_pre.shape[0]))
 
     pre_car, _ = detect_car_region(img_pre)
     post_car, _ = detect_car_region(aligned)
@@ -144,17 +137,13 @@ def trust_shield_check(pre_path, post_path):
     gray_pre_car = cv2.cvtColor(pre_car, cv2.COLOR_BGR2GRAY)
     gray_post_car = cv2.cvtColor(post_car, cv2.COLOR_BGR2GRAY)
 
-    # Normalize lighting AFTER ROI extraction
-    gray_pre_car = cv2.equalizeHist(gray_pre_car)
-    gray_post_car = cv2.equalizeHist(gray_post_car)
-
     ssim_score, diff = ssim(gray_pre_car, gray_post_car, full=True)
 
     diff_map = (1 - diff) * 255
     diff_map = diff_map.astype("uint8")
     diff_map = cv2.GaussianBlur(diff_map, (5, 5), 0)
 
-    _, diff_thresh = cv2.threshold(diff_map, 40, 255,
+    _, diff_thresh = cv2.threshold(diff_map, 100, 255,
                                    cv2.THRESH_BINARY)
 
     contours, _ = cv2.findContours(diff_thresh,
@@ -168,7 +157,7 @@ def trust_shield_check(pre_path, post_path):
 
     for cnt in contours:
         area = cv2.contourArea(cnt)
-        if area > 2000:
+        if area > 600:
             total_area += area
             largest_area = max(largest_area, area)
             damage_count += 1
