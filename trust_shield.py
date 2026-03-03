@@ -102,32 +102,38 @@ def trust_shield_check(pre_path, post_path):
 
     gray_pre = cv2.cvtColor(img_pre, cv2.COLOR_BGR2GRAY)
     gray_post = cv2.cvtColor(img_post, cv2.COLOR_BGR2GRAY)
-    
 
-    orb = cv2.ORB_create(2000)
-    kp1, des1 = orb.detectAndCompute(gray_pre, None)
-    kp2, des2 = orb.detectAndCompute(gray_post, None)
+    # ==========================
+    # ECC TRANSLATION ALIGNMENT
+    # ==========================
 
-    if des1 is None or des2 is None:
-        return {"success": False, "error": "INSUFFICIENT FEATURES"}
+    warp_mode = cv2.MOTION_TRANSLATION
+    warp_matrix = np.eye(2, 3, dtype=np.float32)
 
-    bf = cv2.BFMatcher(cv2.NORM_HAMMING)
-    matches = bf.knnMatch(des1, des2, k=2)
-    good = [m for m, n in matches if m.distance < 0.75 * n.distance]
+    criteria = (
+        cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT,
+        50,
+        1e-6
+    )
 
-    if len(good) < 8:
-        return {"success": False, "error": "ALIGNMENT FAILED"}
+    try:
+        cc, warp_matrix = cv2.findTransformECC(
+            gray_pre,
+            gray_post,
+            warp_matrix,
+            warp_mode,
+            criteria
+        )
 
-    src_pts = np.float32([kp1[m.queryIdx].pt for m in good]).reshape(-1,1,2)
-    dst_pts = np.float32([kp2[m.trainIdx].pt for m in good]).reshape(-1,1,2)
+        aligned = cv2.warpAffine(
+            img_post,
+            warp_matrix,
+            (img_pre.shape[1], img_pre.shape[0]),
+            flags=cv2.INTER_LINEAR + cv2.WARP_INVERSE_MAP
+        )
 
-    M, _ = cv2.findHomography(dst_pts, src_pts, cv2.RANSAC, 5.0)
-
-    if M is None:
-        return {"success": False, "error": "HOMOGRAPHY FAILED"}
-
-    aligned = cv2.warpPerspective(img_post, M,
-                                  (img_pre.shape[1], img_pre.shape[0]))
+    except:
+        aligned = img_post
 
     pre_car, _ = detect_car_region(img_pre)
     post_car, _ = detect_car_region(aligned)
