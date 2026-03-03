@@ -180,11 +180,11 @@ def trust_shield_check(pre_path, post_path):
         0.2 * normalized_intensity
     )
 
-    if ssim_score > 0.96:
+    if ssim_score > 0.96 and severity_score < 0.08:
         status = "CLEAR"
-    elif severity_score > 0.12:
+    elif severity_score > 0.35:
         status = "MAJOR DAMAGE"
-    elif severity_score > 0.04:
+    elif severity_score > 0.10:
         status = "MODERATE DAMAGE"
     else:
         status = "MINOR DAMAGE"
@@ -239,11 +239,11 @@ def trust_shield_multi(pre_dict, post_dict):
     avg_damage_ratio = total_damage_ratio / valid_pairs
     avg_ssim = total_ssim / valid_pairs
 
-    if avg_ssim > 0.96:
+    if avg_ssim > 0.96 and avg_severity < 0.08:
         overall_status = "APPROVED"
-    elif avg_severity > 0.12:
+    elif avg_severity > 0.35:
         overall_status = "MAJOR DAMAGE"
-    elif avg_severity > 0.04:
+    elif avg_severity > 0.10:
         overall_status = "MODERATE DAMAGE"
     else:
         overall_status = "MINOR DAMAGE"
