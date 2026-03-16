@@ -187,10 +187,10 @@ def trust_shield_check(pre_path, post_path):
     # Weighted combination of all 4 signals
     # ==========================
     severity_score = (
-        0.35 * damage_ratio +
-        0.20 * largest_ratio +
-        0.25 * edge_change +
-        0.20 * color_change
+        0.40 * damage_ratio +
+        0.25 * largest_ratio +
+        0.20 * edge_change +
+        0.15 * color_change
     )
 
     # SSIM penalty — if SSIM is very low, boost severity
@@ -205,11 +205,11 @@ def trust_shield_check(pre_path, post_path):
     # ==========================
     if ssim_score > 0.93 and severity_score < 0.06 and edge_change < 0.03:
         status = "CLEAR"
-    elif severity_score > 0.30 or (ssim_score < 0.75 and damage_count > 3):
+    elif severity_score > 0.35 or (ssim_score < 0.70 and damage_count > 5):
         status = "MAJOR DAMAGE"
-    elif severity_score > 0.08 or damage_count >= 2:
+    elif severity_score > 0.15 or damage_count >= 3:
         status = "MODERATE DAMAGE"
-    elif severity_score > 0.03 or damage_count >= 1:
+    elif severity_score > 0.05 or damage_count >= 1:
         status = "MINOR DAMAGE"
     else:
         status = "CLEAR"
